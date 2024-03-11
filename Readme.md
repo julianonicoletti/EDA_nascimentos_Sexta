@@ -1,0 +1,240 @@
+# Seriam os Americanos Supersticiosos?
+## Através dessa Análise Exploratória de Dados vamos responder se os americanos deixam de ter filhos em Sexta-Feiras 13.
+## A origem da Superstição
+Existem inúmeros relatos e tentativas de se explicar a antiga superstição de que Sexta-Feiras que caem no décimo terceiro dia do mês trariam azar. Uma delas, ligada ao Cristianismo diz que, em sua última ceia, uma quinta-feira, Jesus teria se reunido com 12 de seus apóstolos, totalizando 13 pessoas, e que no dia seguinte, uma sexta-feira teria sido crucificado e morto. Outra “teoria”, essa de origem nórdica envolve a mitologia. Segundo ela, teria Odin realizado um banquete e convidou 12 divindades, mas Loki, Deus da Discórdia e do fogo, que não teria sido convidado, armou uma confusão e terminou com a morte de uma dos convidados. Assim, diz a superstição que um encontro com 13 pessoas sempre termina em tragédia.
+
+## Vamos aos dados
+Tendo acesso a dados de nascimento de bebês dos Estados Unidos vamos realizar uma Análise Exploratória de Dados para confrontar uma pergunta de origem superticiosa: “Seriam os pais americanos supersticiosos os bastante para evitar de ter filhos às Sexta-Feiras 13?
+
+Os dados foram baixados do site Kaggle no link: 
+<br>https://www.kaggle.com/datasets/ayessa/birthday
+
+Para carregamento, manipulação e criação dos gráficos utilizei Python, VS Code como IDE e bibliotecas como Pandas, Seaborn, Matplotlib.
+## Preparando o Dataset
+Ao baixar os 2 arquivos do Kaggle verifica-se que eles cobrem os anos de 1994 a 2003 e de 2000 a 2014. Assim, após o loading e a união dos 2 arquivos num único Dataset(df) foi feito o drop dos valores duplicados.
+```python
+#Importando as bibliotecas necessárias
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import plotly.express as px
+```
+## Explorando os dados
+Com os Dataset já unido e com as linhas duplicadas retiradas vamos conhecer melhor os dados presentes:
+```python
+#exibindo as primeiras 5 linhas do df
+df.head()
+```
+![alt text](images/image.png)
+
+Verificamos que temos um Dataset com informações da quantidade de nascimento por dia. As colunas month, date_of_month e day_of_week nos informa que dia exatamente cai cada registro.
+
+Por já ter os dados que presumi ser importante para as análises não criei nenhuma coluna adicional. Poderia ter criado uma coluna no formato DateTime, função disponível no Pandas, mas achei desnecessária tendo em vista do detalhamento de informações que as outras colunas já fornecem.
+
+Fiz uma alteração na coluna day_of_week para transformar os dias da semana em números em descritivos, onde 1 = Domingo, 2 = Segunda até 7 = Sábado. Pra isso usei uma função map e um dicionário com as chaves-resultados:
+```python
+#alterando os valores da coluna day_of_week
+dias_semana = {
+    1: 'Domingo',
+    2: 'Segunda',
+    3: 'Terça',
+    4: 'Quarta',
+    5: 'Quinta',
+    6: 'Sexta',
+    7: 'Sábado'
+}
+
+df['day_of_week'] = df['day_of_week'].map(dias_semana)
+df.head()
+```
+![alt text](<images/Captura de tela 2024-03-11 141157.png>)
+
+
+Vamos examinar melhor cada uma dessas colunas:
+```python
+df.describe(include='all')
+```
+![alt text](<images/Captura de tela 2024-03-06 151404.png>)
+
+Para uma boa análise de dados precisamos verificar se há elementos faltantes em todo o Dataset. Podemos fazer isso com um comando da biblioteca Pandas:
+```python
+df.isnull().sum()
+```
+![alt text](<images/Captura de tela 2024-03-06 151716.png>)
+
+Verificamos que não há nenhuma linha com elementos faltantes.
+
+Em seguida faremos uma detecção da presenta de outliers no nosso Dataset. Outliers são registros muito fora dos padrões, que podem distorcer a análise. Importante verificar se tais registros são frutos de problemas na coleta ou algum fato raro mas que deve ser levado em consideração.
+
+```python
+df['births'].plot.box()
+```
+![alt text](<images/Captura de tela 2024-03-06 151951.png>)
+
+Como o gráfico de Boxplot mostra, não há valores para a coluna alvo que destoem significativamente na amostra. Geralmente são considerados outiliers os valores de mais ou menos 3 vezes do Desvio Padrão ou ainda calculando a Distância interquartílica (IQR) e usando como limite inferior Q1–1,5 * IQR e limite superior Q3 + 1,5 * IQR.
+
+Para verificarmos a distribuição de nascimentos usamos um gráfico do tipo Histograma:
+```python
+sns.histoplot(df.births, bins=15)
+```
+![alt text](<images/Captura de tela 2024-03-06 153248.png>)
+
+Vemos uma distribuição da contagem de dias por quantidade de nascimentos com 2 picos, um deles aproximadamente em 8000 nascimentos/dia e outro 13000. Essa variação binária será explicada quando plotarmos a distribuição de nascimentos por dia da semana.
+
+## Respondendo perguntas com os dados
+Após essa análise primária dos dados podemos formular algumas perguntas para elucidar a nossa pergunta principal. Conseguimos plotar gráficos para observar a distribuição de nascimentos pelos anos presentes nos dados, assim como meses e dias da semana.
+
+### Qual a Distribuição de nascimentos por ano?
+Utilizando ainda o Seaborn e Matplotlib conseguimos plotar um gráfico com a média de nascimentos por ano.
+```python
+cols = ['year', 'births']
+nascimentos_porano = df.loc[:, cols].groupby('year').mean()
+
+sns.barplot(data=nascimentos_porano, x='year', y='births', hue='year', legend=False, palette='crest')
+```
+![alt text](<images/Captura de tela 2024-03-06 172229.png>)
+
+Vemos que há, desde o início dos dados um quase crescente aumento dos nascimentos. Mas o que chama a atenção é um aumento mais significativo de 2003 até 2009. Esse fenônemo foi chamado de “Baby boom” após o 11 de setembro de 2001.
+
+### Qual a distribuição de nascimentos por dia da semana
+
+Nesse ponto conseguimos destacar uma informação relevante para a análise da nossa pergunta inicial. Plotando o gráfico da média de nascimentos por dia da semana temos:
+```python
+cols = ['day_of_week', 'births']
+nascimentos_porano = df.loc[:, cols].groupby('day_of_week').mean()
+
+plt.figure(figsize=(10,6))
+sns.barplot(data=nascimentos_porano, x='day_of_week', y='births', hue='day_of_week', palette='crest', legend=False)
+```
+![alt text](<images/Captura de tela 2024-03-07 114638.png>)
+
+Percebe-se um decaimento dos nascimentos nos dias da semana, que se inicia na sexta e vai até o domingo. Esse detalhe pode levantar questões e explicações. “Teriam os médicos americanos preferência em agendar cesarianas longe dos finais de semana ou a preferência seria dos pais?”.
+
+Mas o mais importante dessa análise é verificar que, independente da sexta-feira ser no dia 13, os dados mostram uma menor taxa de natalidade nesse dia.
+
+## Respondendo a Pergunta Principal
+Para responder e comparar as taxas de nascimentos de dias normais com a Sexta-feira 13 precisamos criar uma coluna que informe quais dias são ou não são uma Sexta e que caem no dia 13 do mês.
+
+Pra isso utilizamos uma função do Pandas que cria uma coluna com valores Booleanos ao comparar outras colunas:
+```python
+df['Sexta_13'] = (df['day_of_week']==6) & (df['date_of_month'] == 13)
+
+#contagem dos valores Falsos e Verdadeiros
+contagem_sexta13 = df['Sexta_13'].value_counts()
+```
+Nessa função queremos os dias que são o sexto dia da semana (sexta-feira) e caem no dia 13 do mês. Verificamos que nesse período de 1994 a 2014 tivemos 36 sexta-feiras. Importante destacar que a estatística mostra que a taxa de sexta-feiras 13 por ano varia, sendo no mínimo 1 e no máximo 3.
+
+Com a coluna criada vamos verificar a média de nascimentos nas “Sexta-13”:
+```python
+media_nascimentos = df.groupby('Sexta_13')['births'].mean()
+print(round(media_nascimentos, 3))
+```
+![alt text](<images/Captura de tela 2024-03-07 115827.png>)
+
+Apenas com essa informação poderíamos supor que há realmente menos nascimentos, na média, nas “Sexta-13” do que em todos os outros dias. No entanto, lembrando do que o gráfico de distribuição de nascimentos por semana nos mostrou, há uma menor taxa em todas as sextas.
+
+Assim, para não cair nesse Viés vamos montar um gráfico comparando os nascimentos em várias outras Sextas com a “Sexta-13”:
+```python
+# Criando uma lista com os dias específicos para sexta-feira
+dias_aleatorios= [2, 12, 14, 24, 30]
+
+# Verificando se o dia da semana é sexta-feira e o dia do mês está na lista de dias especiais
+df['outras_sextas'] = (df['day_of_week'] == 6) & (df['date_of_month'].isin(dias_aleatorios))
+```
+Criamos outra coluna, agora chamada ‘outras_sextas’ que são dias que caem numa Sexta-feiras mas não são 13.
+
+E finalmente plotamos um gráfico comparando a taxa de nascimento dessas ‘outras_sextas’ com as “Sexta-13”.
+```python
+#criando uma coluna com a média dos nascimentos nas Sexta-13
+mean_friday_13th = df[df['Sexta_13']]['births'].mean()
+
+# Plotar o gráfico usando Seaborn
+plt.figure(figsize=(10, 6))
+
+# Plotar a média de nascimentos nos dias próximos à sexta-feira 13
+sns.barplot(x='date_of_month', y='births', data=df[df['outras_sextas']], color='blue', label='Próximo à sexta-feira 13', errorbar=None)
+
+# Adicionar uma linha para a média de nascimentos na sexta-feira 13
+plt.axhline(y=mean_friday_13th, color='red', linestyle='--', label='Sexta-feira 13')
+
+plt.title('Média de nascimentos em outras Sextas do Mês e na sexta-feira 13')
+plt.xlabel('Dia do mês')
+plt.ylabel('Média de nascimentos')
+plt.legend()
+plt.show()
+```
+![alt text](<images/Captura de tela 2024-03-07 123105.png>)
+
+Concluimos que a média de nascimentos em “Sexta-13” e em outras Sexta-feiras não tem diferença significativa.
+
+> **Portanto, os americanos não são supersticiosos os bastante para deixar de ter filhos as Sextas-13. Mas parece que os médicos são convenientes o suficiente para deixar de realizar partos aos finais de semana**.
+
+## Extra — Qual a taxa de nascimentos no Dia de Natal
+Será que no dia de Natal temos uma taxa média de nascimentos menor que em outros dias de Dezembro?
+```python
+# Criando a coluna Booleana 'Natal'
+df['natal'] = (df['month'] == 12) & (df['date_of_month'] == 25)
+mean_natal = df[df['natal']]['births'].mean()
+
+#Criando uma coluna com outros dias de Dezembro
+dias_proximo_natal = [1, 5, 15, 20, 24, 22, 26, 28, 30]
+df['proximo_natal'] = (df['month'] == 12) & (df['date_of_month'].isin(dias_proximo_natal))
+
+# Plotar o gráfico usando Seaborn
+plt.figure(figsize=(10, 6))
+
+# Plotar a média de nascimentos nos dias próximos ao Natal
+sns.barplot(x='date_of_month', y='births', data=df[df['proximo_natal']], color='blue', label='Dias de Dezembro', errorbar=None)
+
+# Adicionar uma linha para a média de nascimentos no Natal
+plt.axhline(y=mean_natal, color='red', linestyle='--', label='Dia 25/12(Natal)')
+
+plt.title('Média de nascimentos em outros dias de dezembro e no Natal')
+plt.xlabel('Dia do mês')
+plt.ylabel('Média de nascimentos')
+plt.legend()
+plt.show()
+```
+![alt text](<images/Captura de tela 2024-03-07 131533.png>)
+
+Vemos um crescimento próximo ao dia 20 e depois um caimento gradual até o dia 25, voltando ao patamar normal após alguns dias.
+
+Portanto, não é muito desejável ter um filho, nem na véspera de Natal nem no próprio dia 25.
+
+## Extra 2 - Após o 11 de setembro a taxa de natalidade nesse dia é menor?
+
+Geralmente eventos impactantes a uma sociedade podem causar efeitos estranhos. Essa dúvida me veio após analisar o efeito Baby-boom após os acontecimentos de 11 de sembro de 2001. Vamos ao código e aos resultados.
+
+```python
+# Verificando se o dia é um 11 de setembro e pegando apenas anos apos 2001.
+df['11_setembro'] = (df['month'] == 9) & (df['date_of_month'] == 11 & (df['year'] >= 2002))
+mean_11_setembro = df[df['11_setembro']]['births'].mean()
+
+# comparar com dias próximos a 11 de Setembro.
+dias_proximo_11_setembro = [2 , 3, 5, 7, 15, 20, 22, 24, 26, 28]
+df['proximo_11_setembro'] = (df['month'] == 9) & (df['year'] >= 2002) & (df['date_of_month'].isin(dias_proximo_11_setembro))
+
+# Plotar o gráfico usando Seaborn
+plt.figure(figsize=(10, 6))
+
+# Plotar a média de nascimentos nos dias próximos à 11 de setembro
+sns.barplot(x='date_of_month', y='births', data=df[df['proximo_11_setembro']], color='blue', label='Dias de Novembro', errorbar=None)
+
+# Adicionar uma linha para a média de nascimentos no dia 11 de setembro
+plt.axhline(y=mean_11_setembro, color='red', linestyle='--', label='Dia 11 de Setembro')
+
+plt.title('Média de nascimentos em outros dias de dezembro e no Natal')
+plt.xlabel('Dia do mês')
+plt.ylabel('Média de nascimentos')
+plt.legend()
+plt.show()
+```
+![alt text](<images/Captura de tela 2024-03-11 141820.png>)
+
+Como explicado no código, fiz o levantamento apenas em anos após 2001 (os dados vão até 2014). Apesar da amostragem ser menor, o fato foi **CONFIRMADO**, tendo os nascimentos no dia 11 de setembro uma média bem menor que nos outros dias de setembro.
+
+
+
+
+
+
